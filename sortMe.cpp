@@ -1,5 +1,5 @@
-//  ! stopwatch() is messy
-// *make (improve) current element which is being examined green
+// ! stopwatch() is messy
+// * make (improve) current element which is being examined green
 
 
 //  g++ -std=c++17 test.cpp -o test -I/Users/roiqk/SFML/include -L/Users/roiqk/SFML/build/lib  -lsfml-graphics -lsfml-window -lsfml-system
