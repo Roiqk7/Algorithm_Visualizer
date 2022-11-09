@@ -109,7 +109,7 @@ void stopwatch(void);                                               //  times ex
 int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed);      //  sfml gui
 void bubbleSort(SortMe &sortMe);                                    //  implements bubble sort 
 void selectionSort(SortMe &sortMe);                                 //  implements selection sort
-void printOut(SortMe &sortMe);                                      //  prints sorted array
+
 
 /*
     ##     ##    ###    #### ##    ## 
