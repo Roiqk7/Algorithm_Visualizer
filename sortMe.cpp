@@ -1,4 +1,5 @@
-//  TODO mergesort 
+//  TODO mergesort, after that move on
+//  !  unexpected closure of the program -> trying to reach for memory outside my program
 // *make (improve) current element which is being examined green
 
 
@@ -18,12 +19,11 @@
 
 //  array related
 using std::array;                       //  make array from std visible
-#define SIZE 150                        //  size of array to be sorted
-#define COL_WIDTH 10                    //  width of col representing number in an array
-#define MAX 200                         //  maximum value for random number inside sortMe array
-#define COL_MULTIPLIER 2.5              //  Multiplies cols for better visuals
-#define WIDTH SIZE*COL_WIDTH            //  Height of the window
-#define HEIGHT MAX*COL_MULTIPLIER+50    //  Width of the window
+#define SIZE 300                        //  size of array to be sorted
+#define COL_WIDTH 5                     //  width of col representing number in an array
+#define COL_MULTIPLIER 2                //  Multiplies cols for better visuals
+#define WIDTH SIZE*COL_WIDTH            //  Width of the window
+#define HEIGHT SIZE*COL_MULTIPLIER      //  Height of the window
 
 //  time 
 #define MICRO_TO_MIL 1000
@@ -52,27 +52,39 @@ class SortMe {
             this->arr = generateUnsortedArray();
         }
 
+        int changedIndex = 0;
+        int currentCol = 0;
+
         //  returns arr[i] if user types sortMe[i]
         int &operator[](int i){return arr[i];}
 
         //  draws the array on screen
-        array<sf::RectangleShape, SIZE> render(array<int, SIZE> &arr, int &currentCol)
+        array<sf::RectangleShape, SIZE> render(SortMe &sortMe)
         {
             array<sf::RectangleShape, SIZE> arrOfRects;
             for (int i = 0; i < SIZE; i++) {
-                arrOfRects[i].setSize(sf::Vector2f(COL_WIDTH, arr[i]*COL_MULTIPLIER));
-                if (i == currentCol) arrOfRects[currentCol].setFillColor(sf::Color::Green);
-                else arrOfRects[i].setFillColor(sf::Color::White);
-                arrOfRects[i].setPosition (sf::Vector2f(i*COL_WIDTH, HEIGHT-arr[i]*COL_MULTIPLIER));
+                arrOfRects[i].setPosition (sf::Vector2f(i*COL_WIDTH, HEIGHT-sortMe[i]*COL_MULTIPLIER));
+                arrOfRects[i].setSize(sf::Vector2f(COL_WIDTH, sortMe[i]*COL_MULTIPLIER));
+                //  colors current col and swapped col if array is unsorted
+                if (sortMe.currentCol < SIZE) {
+                    if (i == sortMe.currentCol) arrOfRects[sortMe.currentCol].setFillColor(sf::Color::Green);
+                    else arrOfRects[i].setFillColor(sf::Color::White);
+                    //  colors changed col to deeper the understanding of the user about the algorithm
+                    arrOfRects[sortMe.changedIndex].setFillColor(sf::Color::Green);
+                    //  places the cols
+                }
+                else {
+                    arrOfRects[i].setFillColor(sf::Color::Green);
+                }
             }
             return arrOfRects;
         }
 
     private:
         // makes sure elements dont repeat in the array 
-        bool isNotInArr(array<int, SIZE> &arr, int num)
+        bool isNotInArr(array<int, SIZE> &arr, int num, int index)
         {
-            for (int i = 0; i < SIZE; i++) if (arr[i] == num) return false;
+            for (int i = 0; i < index; i++) if (arr[i] == num) return false;
             return true;
         }
 
@@ -80,9 +92,9 @@ class SortMe {
         array<int, SIZE> generateUnsortedArray(void) {
             srand(time(NULL));
             array<int, SIZE> arr;
-            for (int i = 0; i != SIZE;) {
-                int num = rand()%MAX;
-                if (isNotInArr(arr, num)) {
+            for (int i = 0; i < SIZE;) {
+                int num = rand()%SIZE;
+                if (isNotInArr(arr, num, i)) {
                     arr[i] = num;
                     i++;
                 }
@@ -95,8 +107,8 @@ class SortMe {
 
 void stopwatch(void);                                               //  times execution time
 int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed);      //  sfml gui
-void bubbleSort(SortMe &sortMe, int &currentCol);                   //  implements bubble sort 
-void selectionSort(SortMe &sortMe, int &currentCol);                //  implements selection sort
+void bubbleSort(SortMe &sortMe);                                    //  implements bubble sort 
+void selectionSort(SortMe &sortMe);                                 //  implements selection sort
 void printOut(SortMe &sortMe);                                      //  prints sorted array
 
 /*
@@ -113,11 +125,11 @@ void printOut(SortMe &sortMe);                                      //  prints s
 //  main() serves the purpose of getting valid user input and kicking off the whole program
 int main(void)
 {
-    int selectedAlgorithm;      //  gets valid user input
+    int selectedAlgorithm;     
     long speed;
     while (true) {
         do {
-            std::cout << "Press (" << bubble << ") for bubble sort algorithm\n";
+            std::cout << "\n\nPress (" << bubble << ") for bubble sort algorithm\n";
             std::cout << "Press (" << selection << ") for selection sort algorithm\n";
             std::cout << "Press (" << merge << ") for merge sort algorithm\n";
             std::cout << "Enter number of the algorithm you wish to visualize: ";
@@ -176,17 +188,16 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed)
     window.setFramerateLimit (60);
 
     //  run the program as long as the window is open
-    int currentCol = 0;
     while (window.isOpen())
     {
-        if (currentCol == SIZE) stopwatch();
+        if (sortMe.currentCol == SIZE) stopwatch();
         usleep(speed * MICRO_TO_MIL);
         switch (selectedAlgorithm) {     
             case bubble:                                    
-                bubbleSort(sortMe, currentCol);
+                bubbleSort(sortMe);
                 break;
             case selection: 
-                selectionSort(sortMe, currentCol);
+                selectionSort(sortMe);
                 break;
             case merge:  
                 // TODO
@@ -205,14 +216,13 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed)
         window.clear(sf::Color::Black);
 
         //  draw the cols
-        for (int i = 0; i < SIZE; i++) window.draw(sortMe.render(sortMe.arr, currentCol)[i]);
+        for (int i = 0; i < SIZE; i++) window.draw(sortMe.render(sortMe)[i]);
 
-        currentCol++;
+        if (sortMe.currentCol < SIZE+1) sortMe.currentCol++;
 
         //  end the current frame
         window.display();
     }
-
     return SUCCESS;
 }
 
@@ -230,17 +240,18 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed)
 
 //  implementation of bubble sort
 //  time complexity: O(n^2)
-void bubbleSort(SortMe &sortMe, int &currentCol)
+void bubbleSort(SortMe &sortMe)
 {
     bool unsorted;
     do {
         unsorted = false;
-        for (int i = 0; i < (currentCol - 1); i++) {
+        for (int i = 0; i < (sortMe.currentCol - 1); i++) {
             if (sortMe.arr[i] > sortMe.arr[i + 1]) {
                 unsorted = true;
-                for (; i < (currentCol - 1); i++) {
+                for (; i < (sortMe.currentCol - 1); i++) {
                     if (sortMe.arr[i] > sortMe.arr[i + 1]) {
                         std::swap(sortMe.arr[i], sortMe.arr[i + 1]);
+                        sortMe.changedIndex = i + 1;
                     }
                 }
             }
@@ -251,20 +262,14 @@ void bubbleSort(SortMe &sortMe, int &currentCol)
 
 //  implementation of selection sort
 //  time complexity: O(n^2)
-void selectionSort(SortMe &sortMe, int &currentCol)
+void selectionSort(SortMe &sortMe)
 {
     int minIndex;
-    if (currentCol != SIZE) {
-        for (int i = minIndex = currentCol; i < SIZE; i++) {          
+    if (sortMe.currentCol < SIZE) {
+        for (int i = minIndex = sortMe.currentCol; i < SIZE; i++) {          
             if (sortMe[minIndex] > sortMe[i]) minIndex = i;      
         }
-        std::swap(sortMe.arr[minIndex], sortMe.arr[currentCol]);
-        return;
+        std::swap(sortMe.arr[minIndex], sortMe.arr[sortMe.currentCol]);
+        sortMe.changedIndex = minIndex;
     } 
-}
-
-void mergeSort(void)
-{
-    //  TODO
-    return;
 }
