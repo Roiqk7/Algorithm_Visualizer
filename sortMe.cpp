@@ -182,7 +182,6 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed)
         if (currentCol == SIZE) stopwatch();
         usleep(speed * MICRO_TO_MIL);
         switch (selectedAlgorithm) {     
-
             case bubble:                                    
                 bubbleSort(sortMe, currentCol);
                 break;
