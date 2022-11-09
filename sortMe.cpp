@@ -1,5 +1,8 @@
-// ! stopwatch() is messy
-// * (improve) colors of the elements being examined
+//  TODO mergesort 
+// *make (improve) current element which is being examined green
+
+
+//  g++ -std=c++17 test.cpp -o test -I/Users/roiqk/SFML/include -L/Users/roiqk/SFML/build/lib  -lsfml-graphics -lsfml-window -lsfml-system
 
 
 //  this program visualizes sorting algorithms using SFML
@@ -15,7 +18,7 @@
 
 //  array related
 using std::array;                       //  make array from std visible
-#define SIZE 100                         //  size of array to be sorted
+#define SIZE 150                        //  size of array to be sorted
 #define COL_WIDTH 10                    //  width of col representing number in an array
 #define MAX 200                         //  maximum value for random number inside sortMe array
 #define COL_MULTIPLIER 2.5              //  Multiplies cols for better visuals
@@ -28,9 +31,8 @@ using std::array;                       //  make array from std visible
 // return values
 #define SUCCESS 0
 #define ERROR -1
-#define USER_DID_NOT_COOPERATE -2
 
-enum SortAlgorithm {bubble = 1, selection = 2};
+enum SortAlgorithm {bubble = 1, selection = 2, merge = 3};
 
 /*
      ######  ##          ###     ######   ######  
@@ -92,7 +94,7 @@ class SortMe {
 
 
 void stopwatch(void);                                               //  times execution time
-int sfml(SortMe &sortMe, int &selectedAlgorithm, long speed);       //  sfml gui
+int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed);      //  sfml gui
 void bubbleSort(SortMe &sortMe, int &currentCol);                   //  implements bubble sort 
 void selectionSort(SortMe &sortMe, int &currentCol);                //  implements selection sort
 void printOut(SortMe &sortMe);                                      //  prints sorted array
@@ -108,6 +110,7 @@ void printOut(SortMe &sortMe);                                      //  prints s
 */
 
 
+//  main() serves the purpose of getting valid user input and kicking off the whole program
 int main(void)
 {
     int selectedAlgorithm;      //  gets valid user input
@@ -116,6 +119,7 @@ int main(void)
         do {
             std::cout << "Press (" << bubble << ") for bubble sort algorithm\n";
             std::cout << "Press (" << selection << ") for selection sort algorithm\n";
+            std::cout << "Press (" << merge << ") for merge sort algorithm\n";
             std::cout << "Enter number of the algorithm you wish to visualize: ";
             std::cin >> selectedAlgorithm;
             std::cout << "Enter speed in milliseconds: ";
@@ -123,12 +127,14 @@ int main(void)
         }
         while (selectedAlgorithm < 0 || speed < 0);
 
-        SortMe sortMe = SortMe();                                       //  initiates SortMe object
+        //  initiates SortMe object
+        SortMe sortMe = SortMe();                                       
 
-        stopwatch();                                                    //  once user entered valid input, timer starts
+        //  once user entered valid input, timer starts
+        stopwatch();                                                    
 
-        sfml(sortMe, selectedAlgorithm, speed);                         //  starts drawing the window 
-                                                            //  ends the timer
+        //  starts drawing the window 
+        sfml(sortMe, selectedAlgorithm, speed);                         
     }
     return SUCCESS;
 }
@@ -138,7 +144,7 @@ int main(void)
 void stopwatch(void)
 {    
     static int state = 0;
-    std::chrono::high_resolution_clock::time_point start;
+    static std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     if (state == 0) {
         state = 1;
         start = std::chrono::high_resolution_clock::now();  
@@ -163,10 +169,10 @@ void stopwatch(void)
 
 
 //  visualizes the algorithm
-int sfml(SortMe &sortMe, int &selectedAlgorithm, long speed)
+int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed)
 {
     // create the window     
-    sf::RenderWindow window(sf::VideoMode(sf::Vector2u(WIDTH, HEIGHT)), "Hello");
+    sf::RenderWindow window(sf::VideoMode(sf::Vector2u(WIDTH, HEIGHT)), "Sort Visualizer");
     window.setFramerateLimit (60);
 
     //  run the program as long as the window is open
@@ -175,15 +181,18 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, long speed)
     {
         if (currentCol == SIZE) stopwatch();
         usleep(speed * MICRO_TO_MIL);
-        switch (selectedAlgorithm) {                                            //  selects algorithm based on user input
-            case bubble:
+        switch (selectedAlgorithm) {     
+
+            case bubble:                                    
                 bubbleSort(sortMe, currentCol);
                 break;
             case selection: 
                 selectionSort(sortMe, currentCol);
                 break;
+            case merge:  
+                // TODO
+                break;
         }
-        currentCol++;
 
         //  check all the window's events that were triggered since the last iteration of the loop
         sf::Event event;
@@ -198,6 +207,8 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, long speed)
 
         //  draw the cols
         for (int i = 0; i < SIZE; i++) window.draw(sortMe.render(sortMe.arr, currentCol)[i]);
+
+        currentCol++;
 
         //  end the current frame
         window.display();
@@ -245,10 +256,16 @@ void selectionSort(SortMe &sortMe, int &currentCol)
 {
     int minIndex;
     if (currentCol != SIZE) {
-        for (int i = minIndex = currentCol; i < SIZE; i++) {          //  finds the lowest number
-            if (sortMe[minIndex] > sortMe[i]) minIndex = i;      //  sets min index at index of lowest number
+        for (int i = minIndex = currentCol; i < SIZE; i++) {          
+            if (sortMe[minIndex] > sortMe[i]) minIndex = i;      
         }
         std::swap(sortMe.arr[minIndex], sortMe.arr[currentCol]);
         return;
     } 
+}
+
+void mergeSort(void)
+{
+    //  TODO
+    return;
 }
