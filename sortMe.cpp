@@ -1,7 +1,4 @@
-//  TODO mergesort, after that move on
-//  !  unexpected closure of the program -> trying to reach for memory outside my program
-// *make (improve) current element which is being examined green
-
+//  ! mergesort doesn't show up -> in progress
 
 //  g++ -std=c++17 test.cpp -o test -I/Users/roiqk/SFML/include -L/Users/roiqk/SFML/build/lib  -lsfml-graphics -lsfml-window -lsfml-system
 
@@ -34,6 +31,7 @@ using std::array;                       //  make array from std visible
 
 enum SortAlgorithm {bubble = 1, selection = 2, merge = 3};
 
+
 /*
      ######  ##          ###     ######   ######  
     ##    ## ##         ## ##   ##    ## ##    ## 
@@ -44,16 +42,19 @@ enum SortAlgorithm {bubble = 1, selection = 2, merge = 3};
      ######  ######## ##     ##  ######   ######  
 */
 
+
 //  class for the array which holds values
 class SortMe {
     public:
         array<int, SIZE> arr;
-        SortMe() {
-            this->arr = generateUnsortedArray();
-        }
+        int changedIndex;
+        int currentCol;
 
-        int changedIndex = 0;
-        int currentCol = 0;
+        SortMe() {
+            arr = generateUnsortedArray();
+            changedIndex = 0;
+            currentCol = 0;
+        }
 
         //  returns arr[i] if user types sortMe[i]
         int &operator[](int i){return arr[i];}
@@ -66,11 +67,11 @@ class SortMe {
                 arrOfRects[i].setPosition (sf::Vector2f(i*COL_WIDTH, HEIGHT-sortMe[i]*COL_MULTIPLIER));
                 arrOfRects[i].setSize(sf::Vector2f(COL_WIDTH, sortMe[i]*COL_MULTIPLIER));
                 //  colors current col and swapped col if array is unsorted
-                if (sortMe.currentCol < SIZE) {
-                    if (i == sortMe.currentCol) arrOfRects[sortMe.currentCol].setFillColor(sf::Color::Green);
+                if (currentCol < SIZE) {
+                    if (i == currentCol) arrOfRects[currentCol].setFillColor(sf::Color::Green);
                     else arrOfRects[i].setFillColor(sf::Color::White);
                     //  colors changed col to deeper the understanding of the user about the algorithm
-                    arrOfRects[sortMe.changedIndex].setFillColor(sf::Color::Green);
+                    arrOfRects[changedIndex].setFillColor(sf::Color::Green);
                     //  places the cols
                 }
                 else {
@@ -109,6 +110,7 @@ void stopwatch(void);                                               //  times ex
 int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed);      //  sfml gui
 void bubbleSort(SortMe &sortMe);                                    //  implements bubble sort 
 void selectionSort(SortMe &sortMe);                                 //  implements selection sort
+void mergeSort(SortMe &sortMe, const int &start, const int &end);   //  implements merge sort
 
 
 /*
@@ -190,8 +192,29 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed)
     //  run the program as long as the window is open
     while (window.isOpen())
     {
+        //  check all the window's events that were triggered since the last iteration of the loop
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            //  "close requested" event: we close the window
+            if (event.type == sf::Event::Closed) window.close();
+        }
+
+        //  if sorted stops refreshing the window and waits for user to close the window
+        if (sortMe.currentCol == SIZE+1) continue;
+
+        //  prints current col in the terminal
+        std::cout << sortMe.currentCol << " is the current col.\n";
+
+        //  if sorted then prints the runtime
         if (sortMe.currentCol == SIZE) stopwatch();
-        usleep(speed * MICRO_TO_MIL);
+
+        //  clear the window with black color
+        window.clear(sf::Color::Black);
+
+        //  draw the cols
+        for (int i = 0; i < SIZE; i++) window.draw(sortMe.render(sortMe)[i]);
+
+        //  sort
         switch (selectedAlgorithm) {     
             case bubble:                                    
                 bubbleSort(sortMe);
@@ -200,28 +223,16 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed)
                 selectionSort(sortMe);
                 break;
             case merge:  
-                // TODO
+                mergeSort(sortMe, 0, SIZE - 1);
                 break;
         }
 
-        //  check all the window's events that were triggered since the last iteration of the loop
-        sf::Event event;
-        while (window.pollEvent(event))
-        {
-            //  "close requested" event: we close the window
-            if (event.type == sf::Event::Closed) window.close();
-        }
-
-        //  clear the window with black color
-        window.clear(sf::Color::Black);
-
-        //  draw the cols
-        for (int i = 0; i < SIZE; i++) window.draw(sortMe.render(sortMe)[i]);
-
-        if (sortMe.currentCol < SIZE+1) sortMe.currentCol++;
+        //  makes sure to correctly increment current col value
+        if (sortMe.currentCol < SIZE+1 && selectedAlgorithm != merge) sortMe.currentCol++;
 
         //  end the current frame
         window.display();
+        usleep(speed * MICRO_TO_MIL);
     }
     return SUCCESS;
 }
@@ -272,4 +283,67 @@ void selectionSort(SortMe &sortMe)
         std::swap(sortMe.arr[minIndex], sortMe.arr[sortMe.currentCol]);
         sortMe.changedIndex = minIndex;
     } 
+}
+
+
+//  merges the array
+void mergeMe(SortMe &sortMe, const int &left, const int &mid, const int &right)
+{
+    const int leftSize = mid - left + 1;
+    const int rightSize = right - mid;
+
+    int *leftArr = new int[leftSize], *rightArr = new int[rightSize];
+
+    //  copy into helper arrays
+    for (int i = 0; i < leftSize; i++) leftArr[i] = sortMe[left + i], sortMe.currentCol = left + i;
+    for (int i = 0; i < rightSize; i++) rightArr[i] = sortMe[mid + 1 + i], sortMe.currentCol = mid + 1 + i;
+
+    int leftIndex, rightIndex;
+    leftIndex = rightIndex = 0;
+    sortMe.currentCol = left;
+
+    //  copy into sortMe
+    while (leftIndex < leftSize && rightIndex < rightSize) {
+        if (leftArr[leftIndex] <= rightArr[rightIndex]) {
+            sortMe[sortMe.currentCol] = leftArr[leftIndex];
+            sortMe.changedIndex = leftIndex;
+            leftIndex++;
+        }
+        else {
+            sortMe[sortMe.currentCol] = rightArr[rightIndex];
+            sortMe.changedIndex = rightIndex;
+            rightIndex++;
+        }
+        sortMe.currentCol++;
+    }
+
+    //  copy the remaining values
+    while (leftIndex < leftSize) {
+        sortMe[sortMe.currentCol] = leftArr[leftIndex];
+        sortMe.changedIndex = leftIndex;
+        leftIndex++;
+        sortMe.currentCol++;
+    }
+
+    while (rightIndex < rightSize) {
+        sortMe[sortMe.currentCol] = rightArr[rightIndex];
+        sortMe.changedIndex = rightIndex;
+        rightIndex++;
+        sortMe.currentCol++;
+    }
+
+    delete[] leftArr;
+    delete[] rightArr;
+}
+
+
+//  implementation of merge sort (2/2)
+//  time complexity: O(n log n)
+void mergeSort(SortMe &sortMe, const int &start, const int &end)
+{
+    if (start >= end) return;
+    int mid = start + (end - start) / 2;
+    mergeSort(sortMe, start, mid);
+    mergeSort(sortMe, mid + 1, end);
+    mergeMe(sortMe, start, mid, end);
 }
