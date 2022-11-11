@@ -15,7 +15,6 @@
 #include <unistd.h> 
 
 //  array related
-using std::array;                       //  make array from std visible
 #define SIZE 300                        //  size of array to be sorted
 #define COL_WIDTH 5                     //  width of col representing number in an array
 #define COL_MULTIPLIER 2                //  Multiplies cols for better visuals
@@ -46,23 +45,22 @@ enum SortAlgorithm {bubble = 1, selection = 2, merge = 3};
 //  class for the array which holds values
 class SortMe {
     public:
-        array<int, SIZE> arr;
+        std::array<int, SIZE> arr;
         int changedIndex;
         int currentCol;
 
         SortMe() {
             arr = generateUnsortedArray();
-            changedIndex = 0;
-            currentCol = 0;
+            changedIndex = currentCol = 0;
         }
 
         //  returns arr[i] if user types sortMe[i]
         int &operator[](int i){return arr[i];}
 
         //  draws the array on screen
-        array<sf::RectangleShape, SIZE> render(SortMe &sortMe)
+        std::array<sf::RectangleShape, SIZE> render(SortMe &sortMe)
         {
-            array<sf::RectangleShape, SIZE> arrOfRects;
+            std::array<sf::RectangleShape, SIZE> arrOfRects;
             for (int i = 0; i < SIZE; i++) {
                 arrOfRects[i].setPosition (sf::Vector2f(i*COL_WIDTH, HEIGHT-sortMe[i]*COL_MULTIPLIER));
                 arrOfRects[i].setSize(sf::Vector2f(COL_WIDTH, sortMe[i]*COL_MULTIPLIER));
@@ -83,16 +81,16 @@ class SortMe {
 
     private:
         // makes sure elements dont repeat in the array 
-        bool isNotInArr(array<int, SIZE> &arr, int num, int index)
+        bool isNotInArr(std::array<int, SIZE> &arr, int num, int index)
         {
             for (int i = 0; i < index; i++) if (arr[i] == num) return false;
             return true;
         }
 
         //  creates unsorted random array of size SIZE
-        array<int, SIZE> generateUnsortedArray(void) {
+        std::array<int, SIZE> generateUnsortedArray(void) {
             srand(time(NULL));
-            array<int, SIZE> arr;
+            std::array<int, SIZE> arr;
             for (int i = 0; i < SIZE;) {
                 int num = rand()%SIZE;
                 if (isNotInArr(arr, num, i)) {
@@ -107,7 +105,7 @@ class SortMe {
 
 
 void stopwatch(void);                                               //  times execution time
-int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed);      //  sfml gui
+int sfml(SortMe &sortMe, int &selectedAlgorithm, int &speed);       //  sfml gui
 void bubbleSort(SortMe &sortMe);                                    //  implements bubble sort 
 void selectionSort(SortMe &sortMe);                                 //  implements selection sort
 void mergeSort(SortMe &sortMe, const int &start, const int &end);   //  implements merge sort
@@ -127,8 +125,7 @@ void mergeSort(SortMe &sortMe, const int &start, const int &end);   //  implemen
 //  main() serves the purpose of getting valid user input and kicking off the whole program
 int main(void)
 {
-    int selectedAlgorithm;     
-    long speed;
+    int selectedAlgorithm, speed;
     while (true) {
         do {
             std::cout << "\n\nPress (" << bubble << ") for bubble sort algorithm\n";
@@ -183,7 +180,7 @@ void stopwatch(void)
 
 
 //  visualizes the algorithm
-int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed)
+int sfml(SortMe &sortMe, int &selectedAlgorithm, int &speed)
 {
     // create the window     
     sf::RenderWindow window(sf::VideoMode(sf::Vector2u(WIDTH, HEIGHT)), "Sort Visualizer");
@@ -195,7 +192,7 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed)
         //  check all the window's events that were triggered since the last iteration of the loop
         sf::Event event;
         while (window.pollEvent(event)) {
-            //  "close requested" event: we close the window
+            //  handles closure of the window
             if (event.type == sf::Event::Closed) window.close();
         }
 
@@ -228,7 +225,7 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, long &speed)
         }
 
         //  makes sure to correctly increment current col value
-        if (sortMe.currentCol < SIZE+1 && selectedAlgorithm != merge) sortMe.currentCol++;
+        sortMe.currentCol++;
 
         //  end the current frame
         window.display();
@@ -334,6 +331,8 @@ void mergeMe(SortMe &sortMe, const int &left, const int &mid, const int &right)
 
     delete[] leftArr;
     delete[] rightArr;
+
+    if (sortMe.currentCol == SIZE) sortMe.currentCol++;
 }
 
 
