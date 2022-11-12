@@ -1,4 +1,10 @@
-//  ! mergesort doesn't show up -> in progress
+/*
+Notes:
+! BUGS - cocktail not working, merge & heap
+? ideas - highlight only the most important array
+*/
+
+
 
 //  g++ -std=c++17 test.cpp -o test -I/Users/roiqk/SFML/include -L/Users/roiqk/SFML/build/lib  -lsfml-graphics -lsfml-window -lsfml-system
 
@@ -28,7 +34,8 @@
 #define SUCCESS 0
 #define ERROR -1
 
-enum SortAlgorithm {bubble = 1, selection = 2, merge = 3};
+//  used to have constant integers represent each algorithm
+enum SortAlgorithms {ZERO, bubble, selection, insertion, cocktail, merge, heap};
 
 
 /*
@@ -46,37 +53,48 @@ enum SortAlgorithm {bubble = 1, selection = 2, merge = 3};
 class SortMe {
     public:
         std::array<int, SIZE> arr;
-        int changedIndex;
+        int changedIndex;   
+        int changedIndex2;  
         int currentCol;
+        int sortedCols;     // * implement
+        bool sorted;
+        int speed;
 
         SortMe() {
             arr = generateUnsortedArray();
-            changedIndex = currentCol = 0;
+            changedIndex = currentCol = speed = 0;
+            sorted = false;
         }
 
         //  returns arr[i] if user types sortMe[i]
         int &operator[](int i){return arr[i];}
 
         //  draws the array on screen
-        std::array<sf::RectangleShape, SIZE> render(SortMe &sortMe)
+        std::array<sf::RectangleShape, SIZE> render()
         {
             std::array<sf::RectangleShape, SIZE> arrOfRects;
             for (int i = 0; i < SIZE; i++) {
-                arrOfRects[i].setPosition (sf::Vector2f(i*COL_WIDTH, HEIGHT-sortMe[i]*COL_MULTIPLIER));
-                arrOfRects[i].setSize(sf::Vector2f(COL_WIDTH, sortMe[i]*COL_MULTIPLIER));
-                //  colors current col and swapped col if array is unsorted
-                if (currentCol < SIZE) {
-                    if (i == currentCol) arrOfRects[currentCol].setFillColor(sf::Color::Green);
+                arrOfRects[i].setPosition (sf::Vector2f(i*COL_WIDTH, HEIGHT-arr[i]*COL_MULTIPLIER));
+                arrOfRects[i].setSize(sf::Vector2f(COL_WIDTH, arr[i]*COL_MULTIPLIER));
+                //  !  currently not working
+                if (!sorted) {
+                    if (i == currentCol || i == changedIndex && changedIndex > 0 ||
+                    i == changedIndex2 && changedIndex2 > 0) arrOfRects[i].setFillColor(sf::Color::Green);
                     else arrOfRects[i].setFillColor(sf::Color::White);
-                    //  colors changed col to deeper the understanding of the user about the algorithm
-                    arrOfRects[changedIndex].setFillColor(sf::Color::Green);
-                    //  places the cols
+                    changedIndex = changedIndex2 = -1;
                 }
                 else {
                     arrOfRects[i].setFillColor(sf::Color::Green);
                 }
             }
             return arrOfRects;
+        }
+
+        //  executes all actions which need to be taken every round
+        void doEveryRound()
+        {
+            isSorted();
+            sleep();
         }
 
     private:
@@ -100,15 +118,42 @@ class SortMe {
                 continue;
             }
             return arr;
-        }       
+        }     
+
+        //  linearly checks if array is sorted
+        void isSorted()
+        {
+            for (int i = 1; i < SIZE; i++) if (arr[i - 1] >= arr[i]) {
+                sorted = false; 
+                return;
+            }
+            sorted = true;
+        }
+
+        //  slows down the program on desired speed
+        void sleep()
+        {
+            usleep(speed * MICRO_TO_MIL);
+        }  
 };
 
 
-void stopwatch(void);                                               //  times execution time
-int sfml(SortMe &sortMe, int &selectedAlgorithm, int &speed);       //  sfml gui
+//  Prototypes with quick orientation details
+
+//  MAIN
+void stopwatch(SortMe &sortMe);                                     //  times execution time
+//  SFML
+int sfml(SortMe &sortMe, int &selectedAlgorithm);                   //  sfml gui
+//  ALGORITHMS
+//  O(N^2)
 void bubbleSort(SortMe &sortMe);                                    //  implements bubble sort 
 void selectionSort(SortMe &sortMe);                                 //  implements selection sort
+void insertionSort(SortMe &sortMe);                                 //  implementation of insertion sort
+void cocktailSort(SortMe &sortMe);                                  //  implementation of cocktail sort
+//  O(N LOG N)
 void mergeSort(SortMe &sortMe, const int &start, const int &end);   //  implements merge sort
+void heapSort(SortMe &sortMe);                                      //  implements heap sort
+//  Note: see detailed description of the algorithms 
 
 
 /*
@@ -125,34 +170,37 @@ void mergeSort(SortMe &sortMe, const int &start, const int &end);   //  implemen
 //  main() serves the purpose of getting valid user input and kicking off the whole program
 int main(void)
 {
-    int selectedAlgorithm, speed;
+    int selectedAlgorithm;
     while (true) {
-        do {
-            std::cout << "\n\nPress (" << bubble << ") for bubble sort algorithm\n";
+        SortMe sortMe = SortMe();
+        do {     
+            //  ? update to for loop
+            std::cout << "\n\n";  
+            std::cout << "Press (" << bubble << ") for bubble sort algorithm\n";
             std::cout << "Press (" << selection << ") for selection sort algorithm\n";
+            std::cout << "Press (" << insertion << ") for insertion sort algorithm\n";
+            std::cout << "Press (" << cocktail << ") for cocktail sort algorithm\n";
             std::cout << "Press (" << merge << ") for merge sort algorithm\n";
+            std::cout << "Press (" << heap << ") for heap sort algorithm\n";
             std::cout << "Enter number of the algorithm you wish to visualize: ";
             std::cin >> selectedAlgorithm;
             std::cout << "Enter speed in milliseconds: ";
-            std::cin >> speed;
+            std::cin >> sortMe.speed;
         }
-        while (selectedAlgorithm < 0 || speed < 0);
-
-        //  initiates SortMe object
-        SortMe sortMe = SortMe();                                       
+        while (selectedAlgorithm < 0 || sortMe.speed < 0);                                       
 
         //  once user entered valid input, timer starts
-        stopwatch();                                                    
+        stopwatch(sortMe);                                                    
 
         //  starts drawing the window 
-        sfml(sortMe, selectedAlgorithm, speed);                         
+        if (sfml(sortMe, selectedAlgorithm) == ERROR) return ERROR; 
     }
     return SUCCESS;
 }
 
 
-//  times execution time using coroutines
-void stopwatch(void)
+//  times execution time using coroutines and sets sorted status to prevent infinite loop
+void stopwatch(SortMe &sortMe)
 {    
     static int state = 0;
     static std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
@@ -180,7 +228,7 @@ void stopwatch(void)
 
 
 //  visualizes the algorithm
-int sfml(SortMe &sortMe, int &selectedAlgorithm, int &speed)
+int sfml(SortMe &sortMe, int &selectedAlgorithm)
 {
     // create the window     
     sf::RenderWindow window(sf::VideoMode(sf::Vector2u(WIDTH, HEIGHT)), "Sort Visualizer");
@@ -189,6 +237,8 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, int &speed)
     //  run the program as long as the window is open
     while (window.isOpen())
     {
+        sortMe.doEveryRound();
+
         //  check all the window's events that were triggered since the last iteration of the loop
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -196,20 +246,17 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, int &speed)
             if (event.type == sf::Event::Closed) window.close();
         }
 
-        //  if sorted stops refreshing the window and waits for user to close the window
-        if (sortMe.currentCol == SIZE+1) continue;
-
         //  prints current col in the terminal
         std::cout << sortMe.currentCol << " is the current col.\n";
 
         //  if sorted then prints the runtime
-        if (sortMe.currentCol == SIZE) stopwatch();
+        if (sortMe.sorted) stopwatch(sortMe);
 
         //  clear the window with black color
         window.clear(sf::Color::Black);
 
         //  draw the cols
-        for (int i = 0; i < SIZE; i++) window.draw(sortMe.render(sortMe)[i]);
+        for (int i = 0; i < SIZE; i++) window.draw(sortMe.render()[i]);
 
         //  sort
         switch (selectedAlgorithm) {     
@@ -218,18 +265,34 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, int &speed)
                 break;
             case selection: 
                 selectionSort(sortMe);
+                sortMe.currentCol++;
+                break;
+            case insertion:  
+                insertionSort(sortMe);
+                sortMe.currentCol++;
+                break;
+            case cocktail:  
+                cocktailSort(sortMe);
+                sortMe.currentCol++;
                 break;
             case merge:  
                 mergeSort(sortMe, 0, SIZE - 1);
                 break;
+            case heap:  
+                heapSort(sortMe);
+                break;
+            default:   
+                return ERROR;
         }
-
-        //  makes sure to correctly increment current col value
-        sortMe.currentCol++;
 
         //  end the current frame
         window.display();
-        usleep(speed * MICRO_TO_MIL);
+
+        //  if sorted starts 10s timer and then closes the window
+        if (sortMe.sorted) {
+            sleep(5);
+            break;
+        }
     }
     return SUCCESS;
 }
@@ -246,44 +309,104 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm, int &speed)
 */
 
 
-//  implementation of bubble sort
-//  time complexity: O(n^2)
+/*
+     #######    ### ##    ##   ###    #######  ###   
+    ##     ##  ##   ###   ##  ## ##  ##     ##   ##  
+    ##     ## ##    ####  ## ##   ##        ##    ## 
+    ##     ## ##    ## ## ##          #######     ## 
+    ##     ## ##    ##  ####         ##           ## 
+    ##     ##  ##   ##   ###         ##          ##  
+     #######    ### ##    ##         ######### ###
+*/
+
+
+/*  
+* Implementation of bubble sort
+The bigger bubbles reach the top faster than smaller bubbles, and this algorithm works in the same way. 
+It iterates through the data structure and for each cycle compares the current element with the next one, 
+swapping them if they are in the wrong order.
+*/
 void bubbleSort(SortMe &sortMe)
 {
-    bool unsorted;
-    do {
-        unsorted = false;
-        for (int i = 0; i < (sortMe.currentCol - 1); i++) {
-            if (sortMe.arr[i] > sortMe.arr[i + 1]) {
-                unsorted = true;
-                for (; i < (sortMe.currentCol - 1); i++) {
-                    if (sortMe.arr[i] > sortMe.arr[i + 1]) {
-                        std::swap(sortMe.arr[i], sortMe.arr[i + 1]);
-                        sortMe.changedIndex = i + 1;
-                    }
+    for (int i = 0; i < (SIZE - 1); i++) {
+        if (sortMe.arr[i] > sortMe.arr[i + 1]) {
+            for (; i < (SIZE - sortMe.currentCol - 1); i++) {
+                if (sortMe.arr[i] > sortMe.arr[i + 1]) {
+                    std::swap(sortMe.arr[i], sortMe.arr[i + 1]);
                 }
             }
+            return;
         }
-    } while (unsorted);
+    }
 }
 
-
-//  implementation of selection sort
-//  time complexity: O(n^2)
+/*
+* Implementation of selection sort:
+Selection Sort is an iterative and in-place sorting algorithm 
+that divides the data structure in two sublists: the ordered one, and the unordered one. 
+The algorithm loops for all the elements of the data structure and for every cycle picks 
+the smallest element of the unordered sublist and adds it to the sorted sublist, progressively filling it.
+*/
 void selectionSort(SortMe &sortMe)
 {
     int minIndex;
-    if (sortMe.currentCol < SIZE) {
-        for (int i = minIndex = sortMe.currentCol; i < SIZE; i++) {          
-            if (sortMe[minIndex] > sortMe[i]) minIndex = i;      
-        }
-        std::swap(sortMe.arr[minIndex], sortMe.arr[sortMe.currentCol]);
-        sortMe.changedIndex = minIndex;
-    } 
+    for (int i = sortMe.currentCol; i < SIZE - 1; i++) {
+        minIndex = i;
+        for (int j = i + 1; j < SIZE; j++)
+          if (sortMe[j] < sortMe[minIndex]) minIndex = j;
+        std::swap(sortMe[minIndex], sortMe[i]);
+        sortMe.changedIndex = i;
+        sortMe.changedIndex2 = minIndex;
+        return;
+    }
 }
 
 
-//  merges the array
+/*
+* Implementation of insertion sort
+The algorithm divides the data structure in two sublists: a sorted one, and one still to sort. 
+Initially, the sorted sublist is made up of just one element and it gets progressively filled. 
+For every iteration, the algorithm picks an element on the unsorted sublist and inserts it at 
+the right place in the sorted sublist.
+*/
+void insertionSort(SortMe &sortMe)
+{
+    for (int i = sortMe.currentCol+1; i < SIZE; i++) {
+        int j = i - 1, key = sortMe[i];
+        for (; j >= 0 && sortMe[j] > key; j--) {
+            sortMe[j + 1] = sortMe[j];
+            sortMe.changedIndex = j;
+            sortMe.changedIndex2 = j + 1;
+        }
+        sortMe[j + 1] = key;
+        return;
+    }
+}
+
+/*
+* Implementation of cocktail sort
+Shaker Sort alternates two Bubble Sorts, the first one that sorts the structure starting 
+from the largest element ordering the elements down to the smallest, and the second one, 
+that starts from the smallest element and sorts the elements up to the largest.
+*/
+void cocktailSort(SortMe &sortMe)
+{
+    //  TODO
+}
+
+
+/*
+     #######    ### ##    ##    ##        #######   ######      ##    ## ###   
+    ##     ##  ##   ###   ##    ##       ##     ## ##    ##     ###   ##   ##  
+    ##     ## ##    ####  ##    ##       ##     ## ##           ####  ##    ## 
+    ##     ## ##    ## ## ##    ##       ##     ## ##   ####    ## ## ##    ## 
+    ##     ## ##    ##  ####    ##       ##     ## ##    ##     ##  ####    ## 
+    ##     ##  ##   ##   ###    ##       ##     ## ##    ##     ##   ###   ##  
+     #######    ### ##    ##    ########  #######   ######      ##    ## ###   
+*/
+
+
+// * Implementation of merge sort (1/2)
 void mergeMe(SortMe &sortMe, const int &left, const int &mid, const int &right)
 {
     const int leftSize = mid - left + 1;
@@ -331,18 +454,55 @@ void mergeMe(SortMe &sortMe, const int &left, const int &mid, const int &right)
 
     delete[] leftArr;
     delete[] rightArr;
-
-    if (sortMe.currentCol == SIZE) sortMe.currentCol++;
 }
 
 
-//  implementation of merge sort (2/2)
-//  time complexity: O(n log n)
-void mergeSort(SortMe &sortMe, const int &start, const int &end)
+/*
+* Implementation of merge sort (2/2)
+The algorithm divides the data structure recursively until the subsequences contain only one element. 
+At this point, the subsequences get merged and ordered sequentially. 
+To do so, the algorithm progressively builds the sorted sublist by adding each time 
+the minimum element of the next two unsorted subsequences until there is only one sublist remaining. 
+This will be the sorted data structure.
+*/
+void mergeSort(SortMe &sortMe, const int &left, const int &right)
 {
-    if (start >= end) return;
-    int mid = start + (end - start) / 2;
-    mergeSort(sortMe, start, mid);
-    mergeSort(sortMe, mid + 1, end);
-    mergeMe(sortMe, start, mid, end);
+    if (left >= right) return;
+    int mid = left + (right - left) / 2;
+    mergeSort(sortMe, left, mid);
+    mergeSort(sortMe, mid + 1, right);
+    mergeMe(sortMe, left, mid, right);
+}
+
+
+// * Implementation of heap sort (2/2)
+void heapify(SortMe &sortMe, int size, int i)
+{
+    int largest = i;
+    int left = 2 * i + 1;
+    int right = 2 * i + 2;
+    if (left < size && sortMe[left] > sortMe[largest]) largest = left;
+    if (right < size && sortMe[right] > sortMe[largest]) largest = right;
+    if (largest != i) {
+        std::swap(sortMe[i], sortMe[largest]);
+        sortMe.changedIndex = largest;
+        heapify(sortMe, size, largest);
+    }
+}
+
+
+/*
+* Implementation of heap sort (2/2)
+The data structure gets ordered to form the heap initially, 
+and then it gets progressively reordered with an algorithm similar to Selection Sort, 
+starting from the bigger elements.
+*/
+void heapSort(SortMe &sortMe)
+{
+    for (int i = SIZE / 2 - 1; i >= 0; i--) heapify(sortMe, SIZE, i);
+    for (int i = SIZE - 1; i >= 0; i--) {
+        std::swap(sortMe[0], sortMe[i]);
+        sortMe.changedIndex = i;
+        heapify(sortMe, i, 0);
+    }
 }
