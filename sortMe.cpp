@@ -491,10 +491,8 @@ int partition (SortMe &sortMe, int low, int high)
     int pivot = sortMe[high];
     int i = (low - 1);
 
-    for (int j = low; j <= high- 1; j++)
-    {
-        if (sortMe[j] <= pivot)
-        {
+    for (int j = low; j <= high- 1; j++) {
+        if (sortMe[j] <= pivot) {
             i++;
             std::swap(sortMe[i], sortMe[j]);
             sortMe.render();
