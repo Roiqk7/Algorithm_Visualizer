@@ -1,6 +1,6 @@
 /*
 Notes:
-TODO - merge & heap don't visualize
+TODO - merge visualize -> while, if, static etc
 */
 
 
@@ -55,13 +55,15 @@ class SortMe {
         int changedIndex;   
         int changedIndex2;  
         int currentCol;
-        bool sorted;
+        bool sorted;        
         int speed;
+        int phase;          //  used for heap sort
 
         SortMe() {
             arr = generateUnsortedArray();
             changedIndex = currentCol = speed = 0;
             sorted = false;
+            phase = 0;
         }
 
         //  returns arr[i] if user types sortMe[i]
@@ -243,12 +245,6 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm)
             if (event.type == sf::Event::Closed) window.close();
         }
 
-        //  prints current col in the terminal
-        std::cout << sortMe.currentCol << " is the current col.\n";
-
-        //  if sorted then prints the runtime
-        if (sortMe.sorted) stopwatch(sortMe);
-
         //  clear the window with black color
         window.clear(sf::Color::Black);
 
@@ -287,6 +283,7 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm)
 
         //  if sorted starts 10s timer and then closes the window
         if (sortMe.sorted) {
+            stopwatch(sortMe);
             sleep(5);
             break;
         }
@@ -336,6 +333,7 @@ void bubbleSort(SortMe &sortMe)
         }
     }
 }
+
 
 /*
 * Implementation of selection sort:
@@ -513,12 +511,33 @@ The data structure gets ordered to form the heap initially,
 and then it gets progressively reordered with an algorithm similar to Selection Sort, 
 starting from the bigger elements.
 */
-void heapSort(SortMe &sortMe)
+void heapSort(SortMe &sortMe) 
 {
-    for (int i = SIZE / 2 - 1; i >= 0; i--) heapify(sortMe, SIZE, i);
-    for (int i = SIZE - 1; i >= 0; i--) {
-        std::swap(sortMe[0], sortMe[i]);
-        sortMe.changedIndex = i;
-        heapify(sortMe, i, 0);
+    static int i;
+    switch (sortMe.phase) {
+        case 0:
+            i = SIZE / 2 - 1;
+            sortMe.phase++;
+            return;
+        case 1:  
+            while (i >= 0) {
+                heapify(sortMe, SIZE, i);
+                i--;
+                return;
+            }
+            sortMe.phase++;
+            return;
+        case 2:  
+            i = SIZE - 1;
+            sortMe.phase++;
+            return;
+        case 3:   
+            while (i >= 0) {
+                std::swap(sortMe[0], sortMe[i]);
+                sortMe.changedIndex = i;
+                heapify(sortMe, i, 0);
+                i --;
+                return;
+            }
     }
-}
+} 
