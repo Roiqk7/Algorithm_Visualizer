@@ -1,7 +1,6 @@
 /*
 Notes:
-! BUGS - cocktail not working, merge & heap
-? ideas - highlight only the most important array
+TODO - merge & heap don't visualize
 */
 
 
@@ -56,7 +55,6 @@ class SortMe {
         int changedIndex;   
         int changedIndex2;  
         int currentCol;
-        int sortedCols;     // * implement
         bool sorted;
         int speed;
 
@@ -235,8 +233,7 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm)
     window.setFramerateLimit (60);
 
     //  run the program as long as the window is open
-    while (window.isOpen())
-    {
+    while (window.isOpen()) {
         sortMe.doEveryRound();
 
         //  check all the window's events that were triggered since the last iteration of the loop
@@ -256,7 +253,8 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm)
         window.clear(sf::Color::Black);
 
         //  draw the cols
-        for (int i = 0; i < SIZE; i++) window.draw(sortMe.render()[i]);
+        auto arr = sortMe.render();
+        for (int i = 0; i < SIZE; i++) window.draw(arr[i]);
 
         //  sort
         switch (selectedAlgorithm) {     
@@ -273,7 +271,6 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm)
                 break;
             case cocktail:  
                 cocktailSort(sortMe);
-                sortMe.currentCol++;
                 break;
             case merge:  
                 mergeSort(sortMe, 0, SIZE - 1);
@@ -383,6 +380,7 @@ void insertionSort(SortMe &sortMe)
     }
 }
 
+
 /*
 * Implementation of cocktail sort
 Shaker Sort alternates two Bubble Sorts, the first one that sorts the structure starting 
@@ -391,7 +389,25 @@ that starts from the smallest element and sorts the elements up to the largest.
 */
 void cocktailSort(SortMe &sortMe)
 {
-    //  TODO
+    static int direction = 1, colsSorted = 0;
+    int i = sortMe.currentCol;
+    if (direction > 0) {
+        if (sortMe.currentCol < SIZE - colsSorted - 1) {
+            if (sortMe[i] > sortMe[i + 1]) std::swap(sortMe[i], sortMe[i + 1]);
+            sortMe.currentCol++;
+            return;
+        }
+        direction = -1;
+    }
+    else {
+        if (sortMe.currentCol > 0 + colsSorted) {
+            if (sortMe[i] > sortMe[i + 1]) std::swap(sortMe[i], sortMe[i + 1]);
+            sortMe.currentCol--;
+            return;
+        }
+        direction = 1;
+        colsSorted++;
+    }
 }
 
 
@@ -475,7 +491,7 @@ void mergeSort(SortMe &sortMe, const int &left, const int &right)
 }
 
 
-// * Implementation of heap sort (2/2)
+// * Implementation of heap sort (1/2)
 void heapify(SortMe &sortMe, int size, int i)
 {
     int largest = i;
