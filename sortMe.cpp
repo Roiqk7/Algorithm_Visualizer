@@ -1,8 +1,6 @@
 /*
-Notes:
 TODO - merge visualize -> while, if, static etc
 */
-
 
 
 //  g++ -std=c++17 test.cpp -o test -I/Users/roiqk/SFML/include -L/Users/roiqk/SFML/build/lib  -lsfml-graphics -lsfml-window -lsfml-system
@@ -16,15 +14,16 @@ TODO - merge visualize -> while, if, static etc
 #include <iostream>
 #include <random>
 #include <SFML/Graphics.hpp>
+#include <string.h>
 #include <time.h>
 #include <unistd.h> 
 
 //  array related
-#define SIZE 300                        //  size of array to be sorted
-#define COL_WIDTH 5                     //  width of col representing number in an array
-#define COL_MULTIPLIER 2                //  Multiplies cols for better visuals
-#define WIDTH SIZE*COL_WIDTH            //  Width of the window
-#define HEIGHT SIZE*COL_MULTIPLIER      //  Height of the window
+#define SIZE 1500                       //  size of array to be sorted
+#define COL_WIDTH 1                     //  width of col representing number in an array
+#define COL_MULTIPLIER 0.4              //  multiplies col value
+#define WIDTH SIZE*COL_WIDTH            //  width of the window
+#define HEIGHT SIZE*COL_MULTIPLIER      //  height of the window
 
 //  time 
 #define MICRO_TO_MIL 1000
@@ -33,8 +32,10 @@ TODO - merge visualize -> while, if, static etc
 #define SUCCESS 0
 #define ERROR -1
 
-//  used to have constant integers represent each algorithm
-enum SortAlgorithms {ZERO, bubble, selection, insertion, cocktail, merge, heap};
+//  algorithm identification
+#define sortAlgsCount 6
+enum SortAlgsEnum {NONE, bubble, selection, insertion, cocktail, merge, heap};
+const std::string sortAlgsNames[sortAlgsCount] = {"bubble", "selection", "insertion", "cocktail", "merge", "heap"};
 
 
 /*
@@ -52,8 +53,6 @@ enum SortAlgorithms {ZERO, bubble, selection, insertion, cocktail, merge, heap};
 class SortMe {
     public:
         std::array<int, SIZE> arr;
-        int changedIndex;   
-        int changedIndex2;  
         int currentCol;
         bool sorted;        
         int speed;
@@ -61,7 +60,7 @@ class SortMe {
 
         SortMe() {
             arr = generateUnsortedArray();
-            changedIndex = currentCol = speed = 0;
+            currentCol = speed = 0;
             sorted = false;
             phase = 0;
         }
@@ -76,12 +75,9 @@ class SortMe {
             for (int i = 0; i < SIZE; i++) {
                 arrOfRects[i].setPosition (sf::Vector2f(i*COL_WIDTH, HEIGHT-arr[i]*COL_MULTIPLIER));
                 arrOfRects[i].setSize(sf::Vector2f(COL_WIDTH, arr[i]*COL_MULTIPLIER));
-                //  !  currently not working
                 if (!sorted) {
-                    if (i == currentCol || i == changedIndex && changedIndex > 0 ||
-                    i == changedIndex2 && changedIndex2 > 0) arrOfRects[i].setFillColor(sf::Color::Green);
+                    if (i == currentCol ) arrOfRects[i].setFillColor(sf::Color::Green);
                     else arrOfRects[i].setFillColor(sf::Color::White);
-                    changedIndex = changedIndex2 = -1;
                 }
                 else {
                     arrOfRects[i].setFillColor(sf::Color::Green);
@@ -176,12 +172,7 @@ int main(void)
         do {     
             //  ? update to for loop
             std::cout << "\n\n";  
-            std::cout << "Press (" << bubble << ") for bubble sort algorithm\n";
-            std::cout << "Press (" << selection << ") for selection sort algorithm\n";
-            std::cout << "Press (" << insertion << ") for insertion sort algorithm\n";
-            std::cout << "Press (" << cocktail << ") for cocktail sort algorithm\n";
-            std::cout << "Press (" << merge << ") for merge sort algorithm\n";
-            std::cout << "Press (" << heap << ") for heap sort algorithm\n";
+            for (int i = 0; i < sortAlgsCount; i++) std::cout << "Press (" << i + 1 << ") for " << sortAlgsNames[i] << " sort algorithm\n";
             std::cout << "Enter number of the algorithm you wish to visualize: ";
             std::cin >> selectedAlgorithm;
             std::cout << "Enter speed in milliseconds: ";
@@ -203,7 +194,7 @@ int main(void)
 void stopwatch(SortMe &sortMe)
 {    
     static int state = 0;
-    static std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+    static std::chrono::high_resolution_clock::time_point start;
     if (state == 0) {
         state = 1;
         start = std::chrono::high_resolution_clock::now();  
@@ -350,8 +341,6 @@ void selectionSort(SortMe &sortMe)
         for (int j = i + 1; j < SIZE; j++)
           if (sortMe[j] < sortMe[minIndex]) minIndex = j;
         std::swap(sortMe[minIndex], sortMe[i]);
-        sortMe.changedIndex = i;
-        sortMe.changedIndex2 = minIndex;
         return;
     }
 }
@@ -370,8 +359,6 @@ void insertionSort(SortMe &sortMe)
         int j = i - 1, key = sortMe[i];
         for (; j >= 0 && sortMe[j] > key; j--) {
             sortMe[j + 1] = sortMe[j];
-            sortMe.changedIndex = j;
-            sortMe.changedIndex2 = j + 1;
         }
         sortMe[j + 1] = key;
         return;
@@ -440,12 +427,10 @@ void mergeMe(SortMe &sortMe, const int &left, const int &mid, const int &right)
     while (leftIndex < leftSize && rightIndex < rightSize) {
         if (leftArr[leftIndex] <= rightArr[rightIndex]) {
             sortMe[sortMe.currentCol] = leftArr[leftIndex];
-            sortMe.changedIndex = leftIndex;
             leftIndex++;
         }
         else {
             sortMe[sortMe.currentCol] = rightArr[rightIndex];
-            sortMe.changedIndex = rightIndex;
             rightIndex++;
         }
         sortMe.currentCol++;
@@ -454,14 +439,12 @@ void mergeMe(SortMe &sortMe, const int &left, const int &mid, const int &right)
     //  copy the remaining values
     while (leftIndex < leftSize) {
         sortMe[sortMe.currentCol] = leftArr[leftIndex];
-        sortMe.changedIndex = leftIndex;
         leftIndex++;
         sortMe.currentCol++;
     }
 
     while (rightIndex < rightSize) {
         sortMe[sortMe.currentCol] = rightArr[rightIndex];
-        sortMe.changedIndex = rightIndex;
         rightIndex++;
         sortMe.currentCol++;
     }
@@ -499,7 +482,6 @@ void heapify(SortMe &sortMe, int size, int i)
     if (right < size && sortMe[right] > sortMe[largest]) largest = right;
     if (largest != i) {
         std::swap(sortMe[i], sortMe[largest]);
-        sortMe.changedIndex = largest;
         heapify(sortMe, size, largest);
     }
 }
@@ -534,7 +516,6 @@ void heapSort(SortMe &sortMe)
         case 3:   
             while (i >= 0) {
                 std::swap(sortMe[0], sortMe[i]);
-                sortMe.changedIndex = i;
                 heapify(sortMe, i, 0);
                 i --;
                 return;
