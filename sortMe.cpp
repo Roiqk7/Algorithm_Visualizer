@@ -25,9 +25,9 @@
 #define ERROR -1
 
 //  algorithm identification
-#define sortAlgsCount 7
-enum SortAlgsEnum {NONE, bubble, selection, insertion, cocktail, merge, heap, quick};
-const std::string sortAlgsNames[sortAlgsCount] = {"bubble", "selection", "insertion", "cocktail", "merge", "heap", "quick"};
+#define sortAlgsCount 6
+enum SortAlgsEnum {NONE, bubble, selection, insertion, merge, heap, quick};
+const std::string sortAlgsNames[sortAlgsCount] = {"bubble", "selection", "insertion", "merge", "heap", "quick"};
 
 // create the window     
 sf::RenderWindow window(sf::VideoMode(sf::Vector2u(WIDTH, HEIGHT)), "Sort Visualizer");
@@ -46,10 +46,10 @@ sf::RenderWindow window(sf::VideoMode(sf::Vector2u(WIDTH, HEIGHT)), "Sort Visual
 //  class for the array which holds values
 class SortMe {
     public:
+        std::array<sf::RectangleShape, SIZE> arrOfRects;
         std::array<int, SIZE> arr;
         int currentCol;
         bool sorted;        
-        std::array<sf::RectangleShape, SIZE> arrOfRects;
 
         SortMe() {
             arr = generateUnsortedArray();
@@ -96,7 +96,7 @@ class SortMe {
             srand(time(NULL));
             std::array<int, SIZE> arr;
             for (int i = 0; i < SIZE;) {
-                int num = rand()%SIZE;
+                int num = rand() % SIZE + 1;
                 if (isNotInArr(arr, num, i)) {
                     arr[i] = num;
                     i++;
@@ -118,8 +118,7 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm);                   //  sfml gui
 //  O(N^2)
 void bubbleSort(SortMe &sortMe);                                    //  implements bubble sort 
 void selectionSort(SortMe &sortMe);                                 //  implements selection sort
-void insertionSort(SortMe &sortMe);                                 //  implementation of insertion sort
-void cocktailSort(SortMe &sortMe);                                  //  implementation of cocktail sort
+void insertionSort(SortMe &sortMe);                                 //  implements insertion sort
 //  O(N LOG N)
 void mergeSort(SortMe &sortMe, const int &start, const int &end);   //  implements merge sort
 void heapSort(SortMe &sortMe);                                      //  implements heap sort
@@ -144,7 +143,6 @@ int main(void)
     while (true) {
         SortMe sortMe = SortMe();
         do {     
-            //  ? update to for loop
             std::cout << "\n\n";  
             for (int i = 0; i < sortAlgsCount; i++) std::cout << "Press (" << i + 1 << ") for " << sortAlgsNames[i] << " sort algorithm\n";
             std::cout << "Enter number of the algorithm you wish to visualize: ";
@@ -162,7 +160,7 @@ int main(void)
 }
 
 
-//  times execution time using coroutines and sets sorted status to prevent infinite loop
+//  times execution time using coroutines
 void stopwatch(SortMe &sortMe)
 {    
     static int state = 0;
@@ -194,19 +192,14 @@ void stopwatch(SortMe &sortMe)
 int sfml(SortMe &sortMe, int &selectedAlgorithm)
 {
     window.setFramerateLimit (60);
-    //  run the program as long as the window is open
     while (window.isOpen()) {
-        //  check all the window's events that were triggered since the last iteration of the loop
         sf::Event event;
         while (window.pollEvent(event)) {
-            //  handles closure of the window
             if (event.type == sf::Event::Closed) window.close();
         }
 
-        //  clear the window with black color
         window.clear(sf::Color::Black);
 
-        //  sort
         switch (selectedAlgorithm) {     
             case bubble:                                    
                 bubbleSort(sortMe);
@@ -216,9 +209,6 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm)
                 break;
             case insertion:  
                 insertionSort(sortMe);
-                break;
-            case cocktail:  
-                cocktailSort(sortMe);
                 break;
             case merge:  
                 mergeSort(sortMe, 0, SIZE - 1);
@@ -233,9 +223,9 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm)
                 return ERROR;
         }
 
-        //
         sortMe.isSorted();
-        //  if sorted starts 10s timer and then closes the window
+
+        //  if sorted colors all cols to green, prints execution time and closes sfml after few seconds
         if (sortMe.sorted) {
             window.clear();
             for (int i = 0; i < SIZE; i++) {
@@ -334,42 +324,6 @@ void insertionSort(SortMe &sortMe)
         sortMe[j + 1] = key;
         sortMe.currentCol = i;
         sortMe.render();
-    }
-}
-
-
-/*
-* Implementation of cocktail sort
-Shaker Sort alternates two Bubble Sorts, the first one that sorts the structure starting 
-from the largest element ordering the elements down to the smallest, and the second one, 
-that starts from the smallest element and sorts the elements up to the largest.
-*/
-void cocktailSort(SortMe &sortMe) 
-{
-    bool swapped = true;
-    int start = 0, end = SIZE - 1;
-    while (swapped) {
-        swapped = 0;
-        for (int i = start; i < SIZE; i++) {
-            if (sortMe[i] > sortMe[i + 1]) {
-                std::swap(sortMe[i], sortMe[i + 1]);
-                sortMe.currentCol = i;
-                sortMe.render();
-                swapped = true;
-            }
-        }
-        if (!swapped) break;
-        swapped = false;
-        end--;
-        for (int i = end - 1; i >= start; --i) {
-            if (sortMe[i] > sortMe[i + 1]) {
-                std::swap(sortMe[i], sortMe[i + 1]);
-                sortMe.currentCol = i;
-                sortMe.render();
-                swapped = true;
-            }
-        }
-        start++;
     }
 }
 
@@ -490,9 +444,11 @@ int partition (SortMe &sortMe, int low, int high)
 {
     int pivot = sortMe[high];
     int i = (low - 1);
-
-    for (int j = low; j <= high- 1; j++) {
-        if (sortMe[j] <= pivot) {
+    sortMe.currentCol = high;
+    for (int j = low; j <= high- 1; j++)
+    {
+        if (sortMe[j] <= pivot)
+        {
             i++;
             std::swap(sortMe[i], sortMe[j]);
             sortMe.render();
