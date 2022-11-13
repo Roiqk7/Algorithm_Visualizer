@@ -1,8 +1,3 @@
-/*
-TODO - merge visualize -> while, if, static etc
-*/
-
-
 //  g++ -std=c++17 test.cpp -o test -I/Users/roiqk/SFML/include -L/Users/roiqk/SFML/build/lib  -lsfml-graphics -lsfml-window -lsfml-system
 
 
@@ -19,24 +14,23 @@ TODO - merge visualize -> while, if, static etc
 #include <unistd.h> 
 
 //  array related
-#define SIZE 1500                       //  size of array to be sorted
-#define COL_WIDTH 1                     //  width of col representing number in an array
-#define COL_MULTIPLIER 0.4              //  multiplies col value
+#define SIZE 250                        //  size of array to be sorted
+#define COL_WIDTH 5                     //  width of col representing number in an array
+#define COL_MULTIPLIER 2                //  multiplies col value
 #define WIDTH SIZE*COL_WIDTH            //  width of the window
 #define HEIGHT SIZE*COL_MULTIPLIER      //  height of the window
-
-//  time 
-#define MICRO_TO_MIL 1000
 
 // return values
 #define SUCCESS 0
 #define ERROR -1
 
 //  algorithm identification
-#define sortAlgsCount 6
-enum SortAlgsEnum {NONE, bubble, selection, insertion, cocktail, merge, heap};
-const std::string sortAlgsNames[sortAlgsCount] = {"bubble", "selection", "insertion", "cocktail", "merge", "heap"};
+#define sortAlgsCount 7
+enum SortAlgsEnum {NONE, bubble, selection, insertion, cocktail, merge, heap, quick};
+const std::string sortAlgsNames[sortAlgsCount] = {"bubble", "selection", "insertion", "cocktail", "merge", "heap", "quick"};
 
+// create the window     
+sf::RenderWindow window(sf::VideoMode(sf::Vector2u(WIDTH, HEIGHT)), "Sort Visualizer");
 
 /*
      ######  ##          ###     ######   ######  
@@ -55,42 +49,38 @@ class SortMe {
         std::array<int, SIZE> arr;
         int currentCol;
         bool sorted;        
-        int speed;
-        int phase;          //  used for heap sort
+        std::array<sf::RectangleShape, SIZE> arrOfRects;
 
         SortMe() {
             arr = generateUnsortedArray();
-            currentCol = speed = 0;
             sorted = false;
-            phase = 0;
         }
 
         //  returns arr[i] if user types sortMe[i]
         int &operator[](int i){return arr[i];}
 
         //  draws the array on screen
-        std::array<sf::RectangleShape, SIZE> render()
+        void render()
         {
-            std::array<sf::RectangleShape, SIZE> arrOfRects;
+            window.clear();
             for (int i = 0; i < SIZE; i++) {
                 arrOfRects[i].setPosition (sf::Vector2f(i*COL_WIDTH, HEIGHT-arr[i]*COL_MULTIPLIER));
                 arrOfRects[i].setSize(sf::Vector2f(COL_WIDTH, arr[i]*COL_MULTIPLIER));
-                if (!sorted) {
-                    if (i == currentCol ) arrOfRects[i].setFillColor(sf::Color::Green);
-                    else arrOfRects[i].setFillColor(sf::Color::White);
-                }
-                else {
-                    arrOfRects[i].setFillColor(sf::Color::Green);
-                }
+                if (i == currentCol && i != 0) arrOfRects[i].setFillColor(sf::Color::Green);
+                else arrOfRects[i].setFillColor(sf::Color::White);
+                window.draw(arrOfRects[i]);
             }
-            return arrOfRects;
+            window.display();
         }
 
-        //  executes all actions which need to be taken every round
-        void doEveryRound()
+        //  linearly checks if array is sorted
+        void isSorted()
         {
-            isSorted();
-            sleep();
+            for (int i = 1; i < SIZE; i++) if (arr[i - 1] >= arr[i]) {
+                sorted = false; 
+                return;
+            }
+            sorted = true;
         }
 
     private:
@@ -115,22 +105,6 @@ class SortMe {
             }
             return arr;
         }     
-
-        //  linearly checks if array is sorted
-        void isSorted()
-        {
-            for (int i = 1; i < SIZE; i++) if (arr[i - 1] >= arr[i]) {
-                sorted = false; 
-                return;
-            }
-            sorted = true;
-        }
-
-        //  slows down the program on desired speed
-        void sleep()
-        {
-            usleep(speed * MICRO_TO_MIL);
-        }  
 };
 
 
@@ -149,7 +123,7 @@ void cocktailSort(SortMe &sortMe);                                  //  implemen
 //  O(N LOG N)
 void mergeSort(SortMe &sortMe, const int &start, const int &end);   //  implements merge sort
 void heapSort(SortMe &sortMe);                                      //  implements heap sort
-//  Note: see detailed description of the algorithms 
+void quickSort(SortMe &sortMe, int low, int high);                  //  implements quick sort
 
 
 /*
@@ -175,10 +149,8 @@ int main(void)
             for (int i = 0; i < sortAlgsCount; i++) std::cout << "Press (" << i + 1 << ") for " << sortAlgsNames[i] << " sort algorithm\n";
             std::cout << "Enter number of the algorithm you wish to visualize: ";
             std::cin >> selectedAlgorithm;
-            std::cout << "Enter speed in milliseconds: ";
-            std::cin >> sortMe.speed;
         }
-        while (selectedAlgorithm < 0 || sortMe.speed < 0);                                       
+        while (selectedAlgorithm < 0 && selectedAlgorithm < sortAlgsCount);                                       
 
         //  once user entered valid input, timer starts
         stopwatch(sortMe);                                                    
@@ -221,14 +193,9 @@ void stopwatch(SortMe &sortMe)
 //  visualizes the algorithm
 int sfml(SortMe &sortMe, int &selectedAlgorithm)
 {
-    // create the window     
-    sf::RenderWindow window(sf::VideoMode(sf::Vector2u(WIDTH, HEIGHT)), "Sort Visualizer");
     window.setFramerateLimit (60);
-
     //  run the program as long as the window is open
     while (window.isOpen()) {
-        sortMe.doEveryRound();
-
         //  check all the window's events that were triggered since the last iteration of the loop
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -239,10 +206,6 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm)
         //  clear the window with black color
         window.clear(sf::Color::Black);
 
-        //  draw the cols
-        auto arr = sortMe.render();
-        for (int i = 0; i < SIZE; i++) window.draw(arr[i]);
-
         //  sort
         switch (selectedAlgorithm) {     
             case bubble:                                    
@@ -250,11 +213,9 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm)
                 break;
             case selection: 
                 selectionSort(sortMe);
-                sortMe.currentCol++;
                 break;
             case insertion:  
                 insertionSort(sortMe);
-                sortMe.currentCol++;
                 break;
             case cocktail:  
                 cocktailSort(sortMe);
@@ -265,15 +226,23 @@ int sfml(SortMe &sortMe, int &selectedAlgorithm)
             case heap:  
                 heapSort(sortMe);
                 break;
+            case quick:
+                quickSort(sortMe, 0, SIZE - 1);
+                break;
             default:   
                 return ERROR;
         }
 
-        //  end the current frame
-        window.display();
-
+        //
+        sortMe.isSorted();
         //  if sorted starts 10s timer and then closes the window
         if (sortMe.sorted) {
+            window.clear();
+            for (int i = 0; i < SIZE; i++) {
+                sortMe.arrOfRects[i].setFillColor(sf::Color::Green);
+                window.draw(sortMe.arrOfRects[i]);
+            }
+            window.display();
             stopwatch(sortMe);
             sleep(5);
             break;
@@ -315,12 +284,13 @@ void bubbleSort(SortMe &sortMe)
 {
     for (int i = 0; i < (SIZE - 1); i++) {
         if (sortMe.arr[i] > sortMe.arr[i + 1]) {
-            for (; i < (SIZE - sortMe.currentCol - 1); i++) {
+            for (; i < (SIZE - 1); i++) {
                 if (sortMe.arr[i] > sortMe.arr[i + 1]) {
                     std::swap(sortMe.arr[i], sortMe.arr[i + 1]);
+                    sortMe.currentCol = i + 1;
+                    sortMe.render();
                 }
             }
-            return;
         }
     }
 }
@@ -341,7 +311,8 @@ void selectionSort(SortMe &sortMe)
         for (int j = i + 1; j < SIZE; j++)
           if (sortMe[j] < sortMe[minIndex]) minIndex = j;
         std::swap(sortMe[minIndex], sortMe[i]);
-        return;
+        sortMe.currentCol = i;
+        sortMe.render();
     }
 }
 
@@ -361,7 +332,8 @@ void insertionSort(SortMe &sortMe)
             sortMe[j + 1] = sortMe[j];
         }
         sortMe[j + 1] = key;
-        return;
+        sortMe.currentCol = i;
+        sortMe.render();
     }
 }
 
@@ -372,26 +344,32 @@ Shaker Sort alternates two Bubble Sorts, the first one that sorts the structure 
 from the largest element ordering the elements down to the smallest, and the second one, 
 that starts from the smallest element and sorts the elements up to the largest.
 */
-void cocktailSort(SortMe &sortMe)
+void cocktailSort(SortMe &sortMe) 
 {
-    static int direction = 1, colsSorted = 0;
-    int i = sortMe.currentCol;
-    if (direction > 0) {
-        if (sortMe.currentCol < SIZE - colsSorted - 1) {
-            if (sortMe[i] > sortMe[i + 1]) std::swap(sortMe[i], sortMe[i + 1]);
-            sortMe.currentCol++;
-            return;
+    bool swapped = true;
+    int start = 0, end = SIZE - 1;
+    while (swapped) {
+        swapped = 0;
+        for (int i = start; i < SIZE; i++) {
+            if (sortMe[i] > sortMe[i + 1]) {
+                std::swap(sortMe[i], sortMe[i + 1]);
+                sortMe.currentCol = i;
+                sortMe.render();
+                swapped = true;
+            }
         }
-        direction = -1;
-    }
-    else {
-        if (sortMe.currentCol > 0 + colsSorted) {
-            if (sortMe[i] > sortMe[i + 1]) std::swap(sortMe[i], sortMe[i + 1]);
-            sortMe.currentCol--;
-            return;
+        if (!swapped) break;
+        swapped = false;
+        end--;
+        for (int i = end - 1; i >= start; --i) {
+            if (sortMe[i] > sortMe[i + 1]) {
+                std::swap(sortMe[i], sortMe[i + 1]);
+                sortMe.currentCol = i;
+                sortMe.render();
+                swapped = true;
+            }
         }
-        direction = 1;
-        colsSorted++;
+        start++;
     }
 }
 
@@ -451,6 +429,8 @@ void mergeMe(SortMe &sortMe, const int &left, const int &mid, const int &right)
 
     delete[] leftArr;
     delete[] rightArr;
+
+    sortMe.render();
 }
 
 
@@ -483,6 +463,7 @@ void heapify(SortMe &sortMe, int size, int i)
     if (largest != i) {
         std::swap(sortMe[i], sortMe[largest]);
         heapify(sortMe, size, largest);
+        sortMe.render();
     }
 }
 
@@ -495,30 +476,51 @@ starting from the bigger elements.
 */
 void heapSort(SortMe &sortMe) 
 {
-    static int i;
-    switch (sortMe.phase) {
-        case 0:
-            i = SIZE / 2 - 1;
-            sortMe.phase++;
-            return;
-        case 1:  
-            while (i >= 0) {
-                heapify(sortMe, SIZE, i);
-                i--;
-                return;
-            }
-            sortMe.phase++;
-            return;
-        case 2:  
-            i = SIZE - 1;
-            sortMe.phase++;
-            return;
-        case 3:   
-            while (i >= 0) {
-                std::swap(sortMe[0], sortMe[i]);
-                heapify(sortMe, i, 0);
-                i --;
-                return;
-            }
+    for (int i = SIZE / 2 - 1; i >= 0; i--) heapify(sortMe, SIZE, i);
+    for (int i = SIZE - 1; i >= 0; i--) {
+        std::swap(sortMe[0], sortMe[i]);
+        sortMe.currentCol = i;
+        heapify(sortMe, i, 0);
     }
-} 
+}
+
+
+// * Implementation of quick sort (1/2)
+int partition (SortMe &sortMe, int low, int high)
+{
+    int pivot = sortMe[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high- 1; j++)
+    {
+        if (sortMe[j] <= pivot)
+        {
+            i++;
+            std::swap(sortMe[i], sortMe[j]);
+            sortMe.render();
+        }
+    }
+    std::swap(sortMe[i + 1], sortMe[high]);
+    sortMe.render();
+    return (i + 1);
+}
+
+
+/*
+* Implementation of quick sort (2/2)
+This division in partitions is done based on an element, called pivot: 
+all the elements bigger than the pivot get placed on the right side of the structure, 
+the smaller ones to the left, creating two partitions. 
+Next, this procedure gets applied recursively to the two partitions and so on.
+*/
+void quickSort(SortMe &sortMe, int low, int high)
+{
+    if (low >= high) return;
+
+    int pivot = partition(sortMe, low, high);
+
+    quickSort(sortMe, low, pivot - 1);
+    sortMe.render();
+    quickSort(sortMe, pivot + 1, high);
+    sortMe.render();
+}
