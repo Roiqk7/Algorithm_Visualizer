@@ -23,7 +23,7 @@
 #define ERROR -1
 
 // create the window     
-sf::RenderWindow window(sf::VideoMode(sf::Vector2u(WIDTH, HEIGHT)), "Path Finding Visualizer");
+sf::RenderWindow window(sf::VideoMode(sf::Vector2u(WIDTH, HEIGHT)), "Backtracking algorithm visualizer");
 
 //  constant values describing board
 const int QUEEN_NUM = 1;
@@ -59,7 +59,6 @@ class Board {
             window.clear();
             for (int i = 0; i < N; i++) {
                 for (int j = 0; j < N; j++) {
-                    //  board related
                     boardTiles[i].setPosition (sf::Vector2f(j*TILE_SIZE, i*TILE_SIZE));
                     boardTiles[i].setSize(sf::Vector2f(TILE_SIZE, TILE_SIZE));
                     if (map[i][j] == QUEEN_NUM) boardTiles[i].setFillColor(sf::Color::Green);
@@ -168,6 +167,7 @@ bool isValid(Board &board, int &row, int &col)
     }
     return true;
 }
+
 
 /*
 * Implementation of backtracking algorithm, O(n!)
