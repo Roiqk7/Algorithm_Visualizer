@@ -10,7 +10,7 @@
 #include <SFML/Graphics.hpp>
 
 //  map related -> base N = 8; TILE_SIZE = 100 
-//eg if you want to increase N from 8 to 16 you have to decrease TILE_SIZE from 100 to 50
+//  eg if you want to increase N from 8 to 16 you have to decrease TILE_SIZE from 100 to 50
 #define N 8                    //  size of one side of the square map
 #define TILE_SIZE 100          //  size of one tile on the map
 
@@ -215,4 +215,3 @@ void printOut(Board &board)
     }
     std::cout << '\n' << formattedReturn << '\n';
 }
-
